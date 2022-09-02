@@ -1,0 +1,43 @@
+dmx_channel = 'DMX2'
+shift = 42
+
+
+def calculate_value(value):
+    if value != 0:
+        if value < 170:
+            value = value + shift
+        else:
+            value = value - shift
+    return value
+
+
+with open('sequence.txt', 'r') as sequence:
+    with open('fixed_sequence.txt', 'w') as fixed_sequence:
+        text_content = sequence.readlines()
+        for line in text_content:
+            new_line = line
+            if 'E_SLIDER_' + dmx_channel + '' in line:
+                new_line = ''
+                line = line.split('E_SLIDER_' + dmx_channel + '=')
+                new_line += line[0] + 'E_SLIDER_' + dmx_channel + '='
+                value = int(line[1].split(',')[0])
+                value = calculate_value(value)
+                new_line += str(value) + ',' + ','.join(line[1].split(',')[1:])
+            elif 'ID_VALUECURVE_' + dmx_channel + '|Type=Ramp|' in line:
+                new_line = ''
+                line_after_curve = line.split('ID_VALUECURVE_' + dmx_channel + '|Type=Ramp|')[1]
+                for x in range(1, 100):
+                    element = 'P' + str(x) + '='
+                    if element not in line_after_curve:
+                        continue
+                    if new_line != '':
+                        original_line = new_line.split(element)
+                    else:
+                        original_line = line_after_curve.split(element)
+                    new_line = original_line[0] + element
+                    value = float(original_line[1].split('|')[0])
+                    value = calculate_value(value)
+                    new_line += str(value) + '0|' + '|'.join(original_line[1].split('|')[1:])
+                new_line = line.split('ID_VALUECURVE_' + dmx_channel + '|Type=Ramp|')[
+                               0] + 'ID_VALUECURVE_' + dmx_channel + '|Type=Ramp|' + new_line
+            fixed_sequence.write(new_line)
